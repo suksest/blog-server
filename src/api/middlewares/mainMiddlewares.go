@@ -4,13 +4,13 @@ import (
 	"github.com/labstack/echo"
 )
 
-// func SetMainMiddlewares(e *echo.Echo) {
-// 	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
-// 		Root: "../../../static",
-// 	}))
+func SetMainMiddlewares(e *echo.Echo) {
+	// e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+	// 	Root: "../static",
+	// }))
 
-// 	e.Use(serverHeader)
-// }
+	e.Use(serverHeader)
+}
 
 func serverHeader(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
