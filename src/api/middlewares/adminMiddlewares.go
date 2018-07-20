@@ -13,10 +13,9 @@ func SetAdminMiddlewares(g *echo.Group) {
 
 	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
 		// check in the DB
-		if username == "ridwan" && password == "ridwan1234" {
+		if username == "ridwan" && password == "ridwan123" {
 			return true, nil
 		}
-
 		return true, nil
 	}))
 }

@@ -1,13 +1,20 @@
 package main
 
 import (
-    "fmt"
-    "router"
+	"database/sql"
+	"fmt"
+	"router"
+
+	_ "github.com/lib/pq"
 )
 
-func main() {
-    fmt.Println("Welcome to the webserver")
-    e := router.New()
+var db *sql.DB
 
-    e.Start(":8000")
+func main() {
+	fmt.Println("Welcome to the webserver")
+
+	e := router.New()
+
+	e.Start(":8000")
+
 }
