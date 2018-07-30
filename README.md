@@ -1,12 +1,12 @@
-# echo-server
+# blog-server
 
 ## Description 
-Simple Sample of web serverusing Echo Golang Framework.
+Restful API Web server for simple blog using Echo framework, Gorm, and Postgresql. 
 
 ## Installation
 Clone the project:
 ```
-  git clone https://github.com/ridwanfathin/echo-server
+  git clone https://github.com/ridwanfathin/blog-server
  ```
  open the directory:
  ```
@@ -20,14 +20,16 @@ Clone the project:
  
  build binaries: 
  ``` 
- go install main
+ go build main
  
  ```
  
  run the server: 
  
  ```
- bin/main
+ ./main (linux & Mac)
+ main.exe (windows)
+
  
  ```
  
