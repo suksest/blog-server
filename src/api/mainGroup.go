@@ -7,19 +7,16 @@ import (
 )
 
 func MainGroup(e *echo.Echo) {
-	e.GET("/login", handlers.Login)
+	e.GET("/login", handlers.LoginJWT)
 	e.GET("/", handlers.Home)
 	e.GET("/user/:data", handlers.GetUser)
 
 	e.POST("/user", handlers.AddUser)
+	e.POST("/user/signup", handlers.SignupUser)
+	e.POST("/user/login", handlers.LoginUser)
 	e.POST("/message", handlers.AddMessage)
 	e.POST("/news", handlers.AddNews)
 
-	e.GET("/books", handlers.BooksIndex)
-	// e.GET("/books/show", handlers.booksShow)
-	// e.GET("/books/create", handlers.booksCreateForm)
-	// e.POST("/books/create/process", handlers.booksCreateProcess)
-	// e.GET("/books/update", handlers.booksUpdateForm)
-	// e.PUT("/books/update/process", handlers.booksUpdateProcess)
-	// e.DELETE("/books/delete/process", handlers.booksDeleteProcess)
+	e.POST("/publish", handlers.PublishPost)
+
 }
