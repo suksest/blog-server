@@ -32,20 +32,4 @@ Clone the project:
 
  
  ```
- 
- Note: if you want to use anything other the `master` aka the last publish part, switch to
- its branch and build binaries.
- 
- list all branches:
- ```
-  git branch -a
- ```
- checkout to the branch you want and build/run like before:
- ```
-  git checkout part_1_hello_world
- 
-  go install main
- 
-  bin/main
- ```
   
