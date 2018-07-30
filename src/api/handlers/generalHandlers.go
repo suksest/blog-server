@@ -7,5 +7,5 @@ import (
 )
 
 func Home(c echo.Context) error {
-	return c.String(http.StatusOK, "This is home in webside!")
+	return c.String(http.StatusOK, "Welcome to the blog-server")
 }
