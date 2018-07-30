@@ -15,6 +15,8 @@ func MainGroup(e *echo.Echo) {
 	e.POST("/user/login", handlers.LoginUser)
 	e.GET("/user", handlers.GetAllUser)
 	e.GET("/user/:id", handlers.GetUserByID)
+	e.DELETE("/user/:id", handlers.DeleteByID)
+	e.PUT("/user/:id", handlers.UpdateUser)
 
 	//Post
 	e.POST("/publish", handlers.PublishPost)

@@ -139,3 +139,74 @@ func GetUserByID(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, user)
 }
+
+func DeleteByID(c echo.Context) error {
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, err)
+	}
+
+	user.Delete(uint(id))
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "OK",
+		"message": "User with ID:" + fmt.Sprint(id) + " sucesfully deleted",
+	})
+}
+
+func UpdateUser(c echo.Context) error {
+
+	theUser := user.User{}
+
+	defer c.Request().Body.Close()
+
+	b, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		log.Printf("Failed reading the request body for addUsers: %s\n", err)
+		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+	}
+
+	err = json.Unmarshal(b, &theUser)
+	if err != nil {
+		log.Printf("Failed unmarshaling in addUsers: %s\n", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FAILED",
+			"message": "Failed unmarshaling input",
+		})
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, err)
+	}
+
+	res, err := user.Update(&theUser, uint(id))
+	if err != nil {
+		switch err.(type) {
+		case *user.UsernameDuplicateError:
+			fmt.Println("Bad Request: ", err.Error())
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"status":  "FAILED",
+				"message": "Bad Request",
+			})
+		case *user.EmailDuplicateError:
+			fmt.Println("Bad Request: ", err.Error())
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"status":  "FAILED",
+				"message": "Bad Request",
+			})
+		default:
+			fmt.Println("Internal Server Error: ", err.Error())
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"status":  "FAILED",
+				"message": "Internal Server Error",
+			})
+		}
+	}
+	fmt.Println("Updated: ", res.ID)
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "OK",
+		"message": "User with ID: " + fmt.Sprint(res.ID) + " Sucessfully Updated",
+	})
+}

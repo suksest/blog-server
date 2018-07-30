@@ -2,6 +2,7 @@ package user
 
 import (
 	"api/postgres"
+	"fmt"
 
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
@@ -60,4 +61,45 @@ func Login(req *User) (*User, error) {
 		return nil, &PasswordMismatchError{}
 	}
 	return user, nil
+}
+
+func Delete(id uint) {
+
+	db := postgres.OpenDB()
+	defer db.Close()
+
+	theUser := User{
+		ID: id,
+	}
+	res := db.Delete(&theUser)
+	fmt.Println(res)
+
+}
+
+func Update(req *User, id uint) (*User, error) {
+
+	db := postgres.OpenDB()
+	defer db.Close()
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.PasswordHash), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	theUser := &User{
+		Username:     req.Username,
+		Email:        req.Email,
+		PasswordHash: string(passwordHash),
+	}
+	updatedUser := new(User)
+	err = db.First(&updatedUser, id).Updates(theUser).Error
+	if err != nil {
+		if postgres.IsUniqueConstraintError(err, UniqueConstraintUsername) {
+			return nil, &UsernameDuplicateError{Username: theUser.Username}
+		}
+		if postgres.IsUniqueConstraintError(err, UniqueConstraintEmail) {
+			return nil, &EmailDuplicateError{Email: theUser.Email}
+		}
+		return nil, err
+	}
+	return updatedUser, nil
 }
