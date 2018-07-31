@@ -32,4 +32,12 @@ Clone the project:
 
  
  ```
+
+  Api Documentation:
+ 
+ ```
+ https://documenter.getpostman.com/view/2407396/RWTeVMrU#be82841b-3d06-f6f8-6e97-64876360879f
+ 
+ ```
+
   
