@@ -20,13 +20,13 @@ func SignupUser(c echo.Context) error {
 
 	b, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		log.Printf("Failed reading the request body for addUsers: %s\n", err)
+		log.Printf("Failed reading the request body for sign up: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
 	}
 
 	err = json.Unmarshal(b, &theUser)
 	if err != nil {
-		log.Printf("Failed unmarshaling in addUsers: %s\n", err)
+		log.Printf("Failed unmarshaling in signup user: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"status":  "FAILED",
 			"message": "Failed unmarshaling input",
@@ -71,13 +71,13 @@ func LoginUser(c echo.Context) error {
 
 	b, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		log.Printf("Failed reading the request body for addUsers: %s\n", err)
+		log.Printf("Failed reading the request body for Login user: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
 	}
 
 	err = json.Unmarshal(b, &theUser)
 	if err != nil {
-		log.Printf("Failed unmarshaling in addUsers: %s\n", err)
+		log.Printf("Failed unmarshaling in Login user: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"status":  "FAILED",
 			"message": "Failed unmarshaling input",
@@ -140,7 +140,7 @@ func GetUserByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-func DeleteByID(c echo.Context) error {
+func DeleteUserByID(c echo.Context) error {
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -163,13 +163,13 @@ func UpdateUser(c echo.Context) error {
 
 	b, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		log.Printf("Failed reading the request body for addUsers: %s\n", err)
+		log.Printf("Failed reading the request body for update user: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
 	}
 
 	err = json.Unmarshal(b, &theUser)
 	if err != nil {
-		log.Printf("Failed unmarshaling in addUsers: %s\n", err)
+		log.Printf("Failed unmarshaling in update user: %s\n", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"status":  "FAILED",
 			"message": "Failed unmarshaling input",

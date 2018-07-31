@@ -38,6 +38,19 @@ func FindByTitle(title string) (*Post, error) {
 	return &post, nil
 }
 
+func FindByAuthorID(id uint) ([]Post, error) {
+
+	db := postgres.OpenDB()
+	defer db.Close()
+
+	posts := []Post{}
+	res := db.Find(&posts, &Post{AuthorID: id})
+	if res.RecordNotFound() {
+		return nil, &IDNotExistsError{}
+	}
+	return posts, nil
+}
+
 func FindByID(id uint) (*Post, error) {
 	var post Post
 

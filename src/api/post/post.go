@@ -1,6 +1,7 @@
 package post
 
 import (
+	"fmt"
 	"postgres"
 
 	"github.com/jinzhu/gorm"
@@ -17,40 +18,30 @@ func Create(db *gorm.DB, post *Post) (uint, error) {
 	return post.ID, nil
 }
 
-// func NewPost(post *Post) (uint, error) {
+func Delete(id uint) {
 
-// 	db := postgres.OpenDB()
-// 	defer db.Close()
+	db := postgres.OpenDB()
+	defer db.Close()
 
-// 	tx := db.Begin()
-// 	if tx.Error != nil {
-// 		return 0, tx.Error
-// 	}
-// 	newPost := &Post{
-// 		AuthorID:    post.AuthorID,
-// 		Title:       post.Title,
-// 		Body:        post.Body,
-// 		PublishedAt: time.Now().UTC(),
-// 	}
-// 	_, err := Create(tx, newPost)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	for _, tagName := range post.Tags {
-// 		t, err := tag.CreateIfNotExists(tx, tagName)
-// 		if err != nil {
-// 			tx.Rollback()
-// 			return 0, err
-// 		}
-// 		err = AddTag(tx, newPost, t)
-// 		if err != nil {
-// 			tx.Rollback()
-// 			return 0, err
-// 		}
-// 	}
-// 	res := tx.Commit()
-// 	if res.Error != nil {
-// 		return 0, res.Error
-// 	}
-// 	return newPost.ID, nil
-// }
+	post := Post{
+		ID: id,
+	}
+	res := db.Delete(&post)
+	fmt.Println(res)
+
+}
+
+func Update(req *Post, id uint) (*Post, error) {
+
+	db := postgres.OpenDB()
+	defer db.Close()
+
+	post := &Post{
+		Title: req.Title,
+		Body:  req.Body,
+	}
+	updatedPost := new(Post)
+	err := db.First(&updatedPost, id).Updates(post).Error
+
+	return updatedPost, err
+}
