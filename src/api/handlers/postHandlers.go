@@ -65,7 +65,7 @@ func PublishPost(c echo.Context) error {
 			// fmt.Println("Bad Request: ", err.Error())
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"status":  "FAILED",
-				"message": "Input Not Valid",
+				"message": "Title already exist",
 			})
 		}
 
@@ -73,8 +73,8 @@ func PublishPost(c echo.Context) error {
 	// return c.JSON(http.StatusOK, &postingan)
 	// fmt.Println("You connected to your databasea.")
 	return c.JSON(http.StatusOK, map[string]string{
-		"status":  "OK",
-		"message": postingan.Title,
+		"status": "OK",
+		"value":  postingan.Title,
 	})
 }
 
