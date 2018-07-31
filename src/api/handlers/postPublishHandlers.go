@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"api/post"
-	"api/postgres"
 	"api/tag"
+	"postgres"
 
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/labstack/echo"

@@ -1,8 +1,8 @@
 package user
 
 import (
-	"api/postgres"
 	"fmt"
+	"postgres"
 
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
