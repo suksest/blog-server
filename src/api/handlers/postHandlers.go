@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"redis"
 	"strconv"
 	"time"
 
@@ -30,52 +31,60 @@ type Response struct {
 }
 
 func PublishPost(c echo.Context) error {
+	req := c.Request()
+	token := req.Header.Get("Authorization")
 
-	postingan := Postingan{}
+	if redis.Find(token) {
+		postingan := Postingan{}
 
-	defer c.Request().Body.Close()
+		defer c.Request().Body.Close()
 
-	b, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
-		log.Printf("Failed reading the request body for publish post: %s\n", err)
-		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
-	}
+		b, err := ioutil.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Printf("Failed reading the request body for publish post: %s\n", err)
+			return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+		}
 
-	err = json.Unmarshal(b, &postingan)
-	if err != nil {
-		log.Printf("Failed unmarshaling in publish post: %s\n", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"status":  "FAILED",
-			"message": "Failed unmarshaling input",
-		})
-	}
-
-	// #dummy
-	// postingan := Postingan{
-	// 	AuthorID: 1,
-	// 	Body:     "Go golang rocks! ",
-	// 	Title:    "My gomidway post2",
-	// 	Tags:     []string{"intro", "golang"},
-	// }
-
-	res, err := NewPost(&postingan)
-	fmt.Println(res)
-	if err != nil {
-		if _, ok := err.(*post.TitleDuplicateError); ok {
-			// fmt.Println("Bad Request: ", err.Error())
-			return c.JSON(http.StatusBadRequest, map[string]string{
+		err = json.Unmarshal(b, &postingan)
+		if err != nil {
+			log.Printf("Failed unmarshaling in publish post: %s\n", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"status":  "FAILED",
-				"message": "Title already exist",
+				"message": "Failed unmarshaling input",
 			})
 		}
 
+		// #dummy
+		// postingan := Postingan{
+		// 	AuthorID: 1,
+		// 	Body:     "Go golang rocks! ",
+		// 	Title:    "My gomidway post2",
+		// 	Tags:     []string{"intro", "golang"},
+		// }
+
+		res, err := NewPost(&postingan)
+		fmt.Println(res)
+		if err != nil {
+			if _, ok := err.(*post.TitleDuplicateError); ok {
+				// fmt.Println("Bad Request: ", err.Error())
+				return c.JSON(http.StatusBadRequest, map[string]string{
+					"status":  "FAILED",
+					"message": "Title already exist",
+				})
+			}
+
+		}
+		return c.JSON(http.StatusOK, map[string]string{
+			"status": "OK",
+			"value":  postingan.Title,
+		})
+	} else {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Invalid Token",
+		})
 	}
-	// return c.JSON(http.StatusOK, &postingan)
-	// fmt.Println("You connected to your databasea.")
-	return c.JSON(http.StatusOK, map[string]string{
-		"status": "OK",
-		"value":  postingan.Title,
-	})
+
 }
 
 func NewPost(postingan *Postingan) (*Response, error) {
@@ -118,112 +127,164 @@ func NewPost(postingan *Postingan) (*Response, error) {
 
 func GetAllPost(c echo.Context) error {
 
-	posts, err := post.FindAll()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+	req := c.Request()
+	token := req.Header.Get("Authorization")
+
+	if redis.Find(token) {
+		posts, err := post.FindAll()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+		}
+
+		return c.JSON(http.StatusOK, posts)
+	} else {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Invalid Token",
+		})
 	}
 
-	return c.JSON(http.StatusOK, posts)
 }
 
 func GetPostByID(c echo.Context) error {
 
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
+	req := c.Request()
+	token := req.Header.Get("Authorization")
+
+	if redis.Find(token) {
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err)
+		}
+
+		post, err := post.FindByID(uint(id))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err)
+		}
+
+		return c.JSON(http.StatusOK, post)
+	} else {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Invalid Token",
+		})
 	}
 
-	post, err := post.FindByID(uint(id))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
-	}
-
-	return c.JSON(http.StatusOK, post)
 }
 
 func GetPostByAuthorID(c echo.Context) error {
 
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	fmt.Printf(fmt.Sprint(id))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
-	}
+	req := c.Request()
+	token := req.Header.Get("Authorization")
 
-	posts, err := post.FindByAuthorID(uint(id))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
-	}
+	if redis.Find(token) {
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+		fmt.Printf(fmt.Sprint(id))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err)
+		}
 
-	return c.JSON(http.StatusOK, posts)
+		posts, err := post.FindByAuthorID(uint(id))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err)
+		}
+
+		return c.JSON(http.StatusOK, posts)
+	} else {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Invalid Token",
+		})
+	}
 }
 
 func DeletePostByID(c echo.Context) error {
 
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
+	req := c.Request()
+	token := req.Header.Get("Authorization")
+
+	if redis.Find(token) {
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err)
+		}
+
+		post.Delete(uint(id))
+
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "OK",
+			"message": "Post with ID:" + fmt.Sprint(id) + " sucesfully deleted",
+		})
+	} else {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Invalid Token",
+		})
 	}
-
-	post.Delete(uint(id))
-
-	return c.JSON(http.StatusOK, map[string]string{
-		"status":  "OK",
-		"message": "Post with ID:" + fmt.Sprint(id) + " sucesfully deleted",
-	})
 }
 
 func UpdatePost(c echo.Context) error {
+	req := c.Request()
+	token := req.Header.Get("Authorization")
 
-	thePost := post.Post{}
+	if redis.Find(token) {
+		thePost := post.Post{}
 
-	defer c.Request().Body.Close()
+		defer c.Request().Body.Close()
 
-	b, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
-		log.Printf("Failed reading the request body for update post: %s\n", err)
-		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
-	}
+		b, err := ioutil.ReadAll(c.Request().Body)
+		if err != nil {
+			log.Printf("Failed reading the request body for update post: %s\n", err)
+			return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+		}
 
-	err = json.Unmarshal(b, &thePost)
-	if err != nil {
-		log.Printf("Failed unmarshaling in update post: %s\n", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"status":  "FAILED",
-			"message": "Failed unmarshaling input",
-		})
-	}
-
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
-	}
-
-	res, err := post.Update(&thePost, uint(id))
-	if err != nil {
-		switch err.(type) {
-		case *user.UsernameDuplicateError:
-			fmt.Println("Bad Request: ", err.Error())
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"status":  "FAILED",
-				"message": "Bad Request",
-			})
-		case *user.EmailDuplicateError:
-			fmt.Println("Bad Request: ", err.Error())
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"status":  "FAILED",
-				"message": "Bad Request",
-			})
-		default:
-			fmt.Println("Internal Server Error: ", err.Error())
+		err = json.Unmarshal(b, &thePost)
+		if err != nil {
+			log.Printf("Failed unmarshaling in update post: %s\n", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"status":  "FAILED",
-				"message": "Internal Server Error",
+				"message": "Failed unmarshaling input",
 			})
 		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err)
+		}
+
+		res, err := post.Update(&thePost, uint(id))
+		if err != nil {
+			switch err.(type) {
+			case *user.UsernameDuplicateError:
+				fmt.Println("Bad Request: ", err.Error())
+				return c.JSON(http.StatusBadRequest, map[string]string{
+					"status":  "FAILED",
+					"message": "Bad Request",
+				})
+			case *user.EmailDuplicateError:
+				fmt.Println("Bad Request: ", err.Error())
+				return c.JSON(http.StatusBadRequest, map[string]string{
+					"status":  "FAILED",
+					"message": "Bad Request",
+				})
+			default:
+				fmt.Println("Internal Server Error: ", err.Error())
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"status":  "FAILED",
+					"message": "Internal Server Error",
+				})
+			}
+		}
+		fmt.Println("Updated: ", res.ID)
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "OK",
+			"message": "Post with ID: " + fmt.Sprint(res.ID) + " Sucessfully Updated",
+		})
+
+	} else {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Invalid Token",
+		})
 	}
-	fmt.Println("Updated: ", res.ID)
-	return c.JSON(http.StatusOK, map[string]string{
-		"status":  "OK",
-		"message": "Post with ID: " + fmt.Sprint(res.ID) + " Sucessfully Updated",
-	})
 }
