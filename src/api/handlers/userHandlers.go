@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"redis"
 	"strconv"
 
 	"github.com/labstack/echo"
@@ -115,6 +116,22 @@ func LoginUser(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "something went wrong")
 	}
 	response.Header().Set("Token", token)
+
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	t, err := json.Marshal(token)
+	if err != nil {
+		panic(err)
+	}
+
+	// Save JSON blob to Redis
+	reply, err := r.Do("SET", "user:"+res.Username, t)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("GET ", reply)
 
 	fmt.Printf("Ok: User '%s' logged in\n", res.Username)
 	return c.JSON(http.StatusOK, map[string]string{
