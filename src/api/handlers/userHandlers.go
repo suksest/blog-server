@@ -107,6 +107,15 @@ func LoginUser(c echo.Context) error {
 			})
 		}
 	}
+
+	response := c.Response()
+	token, err := createJwtToken()
+	if err != nil {
+		log.Println("Error Creating JWT token", err)
+		return c.String(http.StatusInternalServerError, "something went wrong")
+	}
+	response.Header().Set("Token", token)
+
 	fmt.Printf("Ok: User '%s' logged in\n", res.Username)
 	return c.JSON(http.StatusOK, map[string]string{
 		"status":  "OK",
