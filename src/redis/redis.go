@@ -1,6 +1,8 @@
 package redis
 
 import (
+	"encoding/json"
+
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -13,29 +15,33 @@ func RedisConnect() redis.Conn {
 	return c
 }
 
-// func FindAll() Posts {
+func Find(t string) bool {
 
-// 	c := RedisConnect()
-// 	defer c.Close()
+	c := RedisConnect()
+	defer c.Close()
 
-// 	keys, err := c.Do("KEYS", "post:*")
-// 	HandleError(err)
+	keys, err := c.Do("KEYS", "user:*")
+	if err != nil {
+		panic(err)
+	}
 
-// 	var posts Posts
+	for _, k := range keys.([]interface{}) {
+		var token string
 
-// 	for _, k := range keys.([]interface{}) {
-// 		var post Post
+		reply, err := c.Do("GET", k.([]byte))
+		if err != nil {
+			panic(err)
+		}
+		if err := json.Unmarshal(reply.([]byte), &token); err != nil {
+			panic(err)
+		}
 
-// 		reply, err := c.Do("GET", k.([]byte))
-// 		HandleError(err)
-// 		if err := json.Unmarshal(reply.([]byte), &post); err != nil {
-// 			panic(err)
-// 		}
-
-// 		posts = append(posts, post)
-// 	}
-// 	return posts
-// }
+		if t == "Bearer "+token {
+			return true
+		}
+	}
+	return false
+}
 
 // func FindPost(id int) Post {
 // 	var post Post

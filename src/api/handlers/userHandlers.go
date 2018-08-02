@@ -131,8 +131,6 @@ func LoginUser(c echo.Context) error {
 		panic(err)
 	}
 
-	fmt.Printf("GET ", reply)
-
 	fmt.Printf("Ok: User '%s' logged in\n", res.Username)
 	return c.JSON(http.StatusOK, map[string]string{
 		"status":  "OK",
@@ -145,9 +143,8 @@ func GetAllUser(c echo.Context) error {
 
 	req := c.Request()
 	token := req.Header.Get("Authorization")
-	fmt.Printf(token)
 
-	if token == "Bearer asd" {
+	if redis.Find(token) {
 		users, err := user.FindAll()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
@@ -155,7 +152,10 @@ func GetAllUser(c echo.Context) error {
 
 		return c.JSON(http.StatusOK, users)
 	} else {
-		return c.JSON(http.StatusForbidden, "Authorization error")
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Invalid Token",
+		})
 	}
 
 }
