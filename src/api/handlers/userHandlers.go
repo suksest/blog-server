@@ -117,12 +117,21 @@ func LoginUser(c echo.Context) error {
 
 func GetAllUser(c echo.Context) error {
 
-	users, err := user.FindAll()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+	req := c.Request()
+	token := req.Header.Get("Authorization")
+	fmt.Printf(token)
+
+	if token == "Bearer asd" {
+		users, err := user.FindAll()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+		}
+
+		return c.JSON(http.StatusOK, users)
+	} else {
+		return c.JSON(http.StatusForbidden, "Authorization error")
 	}
 
-	return c.JSON(http.StatusOK, users)
 }
 
 func GetUserByID(c echo.Context) error {
