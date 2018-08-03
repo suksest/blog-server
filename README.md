@@ -1,7 +1,7 @@
 # blog-server
 
 ## Description 
-Restful API Web server for simple blog using Echo framework, Gorm, and Postgresql. 
+Restful API Web server for simple blog using Echo framework, Gorm, Redis, and Postgresql. 
 
 ## Installation
 Clone the project:
