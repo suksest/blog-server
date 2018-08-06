@@ -8,7 +8,16 @@ import (
 
 func MainGroup(e *echo.Echo) {
 	//General
-	e.GET("/", handlers.Home)
+	// e.GET("/", handlers.Home)
+
+	// middleware, err := ratelimiter.RateLimitUlule()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// e.Use(middleware)
+
+	// http.Handle("/", middleware.Handler(http.HandlerFunc(index)))
 
 	//User
 	e.POST("/v1.0/user", handlers.SignupUser)
