@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"rateLimiter/fixedWindowCounter"
 	"redis"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo"
 )
@@ -67,6 +69,9 @@ func SignupUser(c echo.Context) error {
 func LoginUser(c echo.Context) error {
 
 	theUser := user.User{}
+
+	fmt.Printf("RealIP:" + fmt.Sprint(c.RealIP()) + "\n")
+	fmt.Printf("Time:" + fmt.Sprint(time.Now().Unix()) + "\n")
 
 	defer c.Request().Body.Close()
 
@@ -131,8 +136,11 @@ func LoginUser(c echo.Context) error {
 		panic(err)
 	}
 
+	// fixedWindowCounter.UserLimiter(fmt.Sprint(t))
+
+	fixedWindowCounter.Init(res.Username)
+
 	fmt.Printf("user:" + res.Username + " " + fmt.Sprint(reply))
-	fmt.Printf("Ok: User '%s' logged in\n", res.Username)
 	return c.JSON(http.StatusOK, map[string]string{
 		"status":  "OK",
 		"message": "User " + res.Username + " logged in",

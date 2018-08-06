@@ -42,19 +42,3 @@ func Find(t string) bool {
 	}
 	return false
 }
-
-// func FindPost(id int) Post {
-// 	var post Post
-
-// 	c := RedisConnect()
-// 	defer c.Close()
-
-// 	reply, err := c.Do("GET", "post:"+strconv.Itoa(id))
-// 	HandleError(err)
-
-// 	fmt.Println("GET OK")
-// 	if err = json.Unmarshal(reply.([]byte), &post); err != nil {
-// 		panic(err)
-// 	}
-// 	return post
-// }
