@@ -10,7 +10,6 @@ import (
 	"rateLimiter/fixedWindowCounter"
 	"redis"
 	"strconv"
-	"time"
 
 	"github.com/labstack/echo"
 )
@@ -70,8 +69,8 @@ func LoginUser(c echo.Context) error {
 
 	theUser := user.User{}
 
-	fmt.Printf("RealIP:" + fmt.Sprint(c.RealIP()) + "\n")
-	fmt.Printf("Time:" + fmt.Sprint(time.Now().Unix()) + "\n")
+	// fmt.Printf("RealIP:" + fmt.Sprint(c.RealIP()) + "\n")
+	// fmt.Printf("Time:" + fmt.Sprint(time.Now().Unix()) + "\n")
 
 	defer c.Request().Body.Close()
 
@@ -136,16 +135,19 @@ func LoginUser(c echo.Context) error {
 		panic(err)
 	}
 
-	// fixedWindowCounter.UserLimiter(fmt.Sprint(t))
-
-	fixedWindowCounter.Init(res.Username)
-
-	fmt.Printf("user:" + res.Username + " " + fmt.Sprint(reply))
-	return c.JSON(http.StatusOK, map[string]string{
-		"status":  "OK",
-		"message": "User " + res.Username + " logged in",
-	})
-
+	if fixedWindowCounter.UserLimiter(res.Username) {
+		fmt.Printf("user:" + res.Username + " " + fmt.Sprint(reply))
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "OK",
+			"message": "User " + res.Username + " logged in",
+		})
+	} else {
+		fmt.Printf("user:" + res.Username + " " + fmt.Sprint(reply))
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "FORBIDDEN",
+			"message": "Request Limit exceeded",
+		})
+	}
 }
 
 func GetAllUser(c echo.Context) error {
