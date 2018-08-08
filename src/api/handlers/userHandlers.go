@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"api/middlewares/rateLimiter/fixedWindowCounter"
 	"api/user"
 	"encoding/json"
 	"fmt"
@@ -135,19 +134,19 @@ func LoginUser(c echo.Context) error {
 		panic(err)
 	}
 
-	config := fixedWindowCounter.NewConfig("userlimiter", 3, "minute")
+	// config := fixedWindowCounter.NewConfig("userlimiter", 3, "minute")
 
-	if fixedWindowCounter.Limiter(config, res.Username) {
-		return c.JSON(http.StatusOK, map[string]string{
-			"status":  "OK",
-			"message": "User " + res.Username + " logged in",
-		})
-	} else {
-		return c.JSON(http.StatusOK, map[string]string{
-			"status":  "FORBIDDEN",
-			"message": "Request Limit exceeded",
-		})
-	}
+	// if fixedWindowCounter.Limiter(config, res.Username) {
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "OK",
+		"message": "User " + res.Username + " logged in",
+	})
+	// } else {
+	// 	return c.JSON(http.StatusOK, map[string]string{
+	// 		"status":  "FORBIDDEN",
+	// 		"message": "Request Limit exceeded",
+	// 	})
+	// }
 }
 
 func GetAllUser(c echo.Context) error {
