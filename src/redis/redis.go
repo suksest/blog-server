@@ -15,7 +15,7 @@ func RedisConnect() redis.Conn {
 	return c
 }
 
-func Find(t string) bool {
+func Find(t string) string {
 
 	c := RedisConnect()
 	defer c.Close()
@@ -37,8 +37,8 @@ func Find(t string) bool {
 		}
 
 		if t == "Bearer "+token {
-			return true
+			return string(k.([]byte))
 		}
 	}
-	return false
+	return ""
 }

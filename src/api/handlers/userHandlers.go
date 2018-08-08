@@ -1,13 +1,13 @@
 package handlers
 
 import (
+	"api/middlewares/rateLimiter/fixedWindowCounter"
 	"api/user"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"rateLimiter/fixedWindowCounter"
 	"redis"
 	"strconv"
 
@@ -130,19 +130,19 @@ func LoginUser(c echo.Context) error {
 	}
 
 	// Save JSON blob to Redis
-	reply, err := r.Do("SET", "user:"+res.Username, t)
+	_, err = r.Do("SET", "user:"+res.Username, t)
 	if err != nil {
 		panic(err)
 	}
 
-	if fixedWindowCounter.UserLimiter(res.Username) {
-		fmt.Printf("user:" + res.Username + " " + fmt.Sprint(reply))
+	config := fixedWindowCounter.NewConfig("userlimiter", 3, "minute")
+
+	if fixedWindowCounter.Limiter(config, res.Username) {
 		return c.JSON(http.StatusOK, map[string]string{
 			"status":  "OK",
 			"message": "User " + res.Username + " logged in",
 		})
 	} else {
-		fmt.Printf("user:" + res.Username + " " + fmt.Sprint(reply))
 		return c.JSON(http.StatusOK, map[string]string{
 			"status":  "FORBIDDEN",
 			"message": "Request Limit exceeded",
@@ -155,7 +155,7 @@ func GetAllUser(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		users, err := user.FindAll()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
@@ -176,7 +176,7 @@ func GetUserByID(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err)
@@ -201,7 +201,7 @@ func DeleteUserByID(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err)
@@ -225,7 +225,7 @@ func UpdateUser(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		theUser := user.User{}
 
 		defer c.Request().Body.Close()
