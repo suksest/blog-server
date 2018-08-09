@@ -34,7 +34,7 @@ func PublishPost(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		postingan := Postingan{}
 
 		defer c.Request().Body.Close()
@@ -130,7 +130,7 @@ func GetAllPost(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		posts, err := post.FindAll()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
@@ -151,7 +151,7 @@ func GetPostByID(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err)
@@ -177,7 +177,7 @@ func GetPostByAuthorID(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		fmt.Printf(fmt.Sprint(id))
 		if err != nil {
@@ -203,7 +203,7 @@ func DeletePostByID(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err)
@@ -227,7 +227,7 @@ func UpdatePost(c echo.Context) error {
 	req := c.Request()
 	token := req.Header.Get("Authorization")
 
-	if redis.Find(token) {
+	if redis.Find(token) != "" {
 		thePost := post.Post{}
 
 		defer c.Request().Body.Close()
