@@ -22,7 +22,7 @@ func Init(c *Config, id string) { //id can be username for authenticated user, o
 	}
 }
 
-func SetHeader(c echo.Context, limit, remain uint, reset int64) { //id can be username for authenticated user, or IP for anonymous user
+func SetHeader(c echo.Context, limit, remain uint, reset int64) {
 	c.Response().Header().Set("X-RateLimit-Limit", fmt.Sprint(limit))
 	c.Response().Header().Set("X-RateLimit-Remaining", fmt.Sprint(remain))
 	c.Response().Header().Set("X-RateLimit-Reset", fmt.Sprint(reset))
@@ -74,7 +74,7 @@ func Limiter(config *Config) echo.MiddlewareFunc {
 								fmt.Printf(fmt.Sprint(err))
 							}
 							SetHeader(c, config.MaxRequest, config.MaxRequest-counter, GetPeriodInt(config.Period)-duration)
-							return nil
+							return next(c)
 						} else {
 							fmt.Printf("Limit Exceeded for :" + id + "\n")
 							SetHeader(c, config.MaxRequest, 0, GetPeriodInt(config.Period)-duration)
@@ -84,7 +84,7 @@ func Limiter(config *Config) echo.MiddlewareFunc {
 				}
 			}
 			SetHeader(c, config.MaxRequest, config.MaxRequest, GetPeriodInt(config.Period))
-			return nil
+			return next(c)
 		}
 	}
 }
