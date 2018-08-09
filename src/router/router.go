@@ -3,7 +3,7 @@ package router
 import (
 	"api"
 	"api/middlewares"
-	limiter "api/middlewares/rateLimiter/fixedWindowCounter"
+	limiter "api/middlewares/ratelimiter/fixedwindowcounter"
 
 	"github.com/labstack/echo"
 )

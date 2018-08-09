@@ -1,4 +1,4 @@
-package fixedWindowCounter
+package fixedwindowcounter
 
 import (
 	"encoding/json"
