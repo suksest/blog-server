@@ -113,12 +113,12 @@ func LoginUser(c echo.Context) error {
 	}
 
 	response := c.Response()
-	token, err := createJwtToken()
+	token, err := createJwtToken(res.Username)
 	if err != nil {
 		log.Println("Error Creating JWT token", err)
 		return c.String(http.StatusInternalServerError, "something went wrong")
 	}
-	response.Header().Set("Token", token)
+	response.Header().Set(echo.HeaderAuthorization, token)
 
 	r := redis.RedisConnect()
 	defer r.Close()
@@ -134,19 +134,10 @@ func LoginUser(c echo.Context) error {
 		panic(err)
 	}
 
-	// config := fixedWindowCounter.NewConfig("userlimiter", 3, "minute")
-
-	// if fixedWindowCounter.Limiter(config, res.Username) {
 	return c.JSON(http.StatusOK, map[string]string{
 		"status":  "OK",
 		"message": "User " + res.Username + " logged in",
 	})
-	// } else {
-	// 	return c.JSON(http.StatusOK, map[string]string{
-	// 		"status":  "FORBIDDEN",
-	// 		"message": "Request Limit exceeded",
-	// 	})
-	// }
 }
 
 func GetAllUser(c echo.Context) error {

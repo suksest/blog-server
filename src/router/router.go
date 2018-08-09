@@ -19,7 +19,7 @@ func New() *echo.Echo {
 	middlewares.SetJwtMiddlewares(jwtGroup)
 
 	config := limiter.NewConfig("userlimiter", 3, "minute")
-	e.Use(limiter.Limiter(config))
+	e.Use(limiter.UserLimiter(config))
 
 	// set main routes
 	api.MainGroup(e)
