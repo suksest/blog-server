@@ -3,29 +3,31 @@ package tokenbucket
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"redis"
 	"time"
 
 	"github.com/labstack/echo"
 )
 
+//Init initialize hash set for user in Redis
 func Init(b *Bucket, id string) { //id can be username for authenticated user, or IP for anonymous user
 	r := redis.RedisConnect()
 	defer r.Close()
 
 	// Init
-	_, err := r.Do("HMSET", b.Prefix+"_"+id, "tokens", b.Capacity, "ts", fmt.Sprint(b.LastRefillTimestamp))
+	_, err := r.Do("HMSET", b.Prefix+"_"+id, "tokens", b.Capacity, "ts", fmt.Sprint(b.StartTimestamp))
 	if err != nil {
 		panic(err)
 	}
 }
 
+//SetHeader set header for response
 func SetHeader(c echo.Context, limit, remain uint) { //id can be username for authenticated user, or IP for anonymous user
 	c.Response().Header().Set("X-RateLimit-Limit", fmt.Sprint(limit))
 	c.Response().Header().Set("X-RateLimit-Remaining", fmt.Sprint(remain))
 }
 
+//Limiter limit request
 func Limiter(config *Bucket) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -39,63 +41,98 @@ func Limiter(config *Bucket) echo.MiddlewareFunc {
 			}
 			if fmt.Sprint(keys) == "[]" {
 				Init(config, id)
+				Take(id)
 			} else {
 				reqTime := time.Now().Unix()
-				replyToken, err := r.Do("HGET", "userlimiter_"+id, "tokens")
-				if err != nil {
-					panic(err)
-				}
-				if err := json.Unmarshal(replyToken.([]byte), &config.AvailableTokens); err != nil {
-					panic(err)
-				}
-				replyTS, err := r.Do("HGET", "userlimiter_"+id, "ts")
-				if err != nil {
-					panic(err)
-				}
-				if err := json.Unmarshal(replyTS.([]byte), &config.LastRefillTimestamp); err != nil {
-					panic(err)
-				}
-				// fmt.Printf(" Available tokens: " + fmt.Sprint(token) + "\n")
-				if config.AvailableTokens != 0 {
-					_, err := r.Do("HINCRBY", "userlimiter_"+id, "tokens", -1)
-					if err != nil {
-						panic(err)
-					}
-					config.AvailableTokens--
-					_, err = r.Do("HSET", "userlimiter_"+id, "ts", reqTime)
-					if err != nil {
-						panic(err)
-					}
-					replyTS, err := r.Do("HGET", "userlimiter_"+id, "ts")
-					if err != nil {
-						panic(err)
-					}
-					if err := json.Unmarshal(replyTS.([]byte), &config.LastRefillTimestamp); err != nil {
-						panic(err)
-					}
-					// fmt.Printf("Current tokens: " + fmt.Sprint(reply) + "\n")
-					SetHeader(c, config.Capacity, config.AvailableTokens)
+				if GetTokens(id) != 0 {
+					Take(id)
+					SetHeader(c, config.Capacity, GetTokens(id))
 					return next(c)
-				} else {
-					elapsedTime := float64(reqTime - config.LastRefillTimestamp)
-					fmt.Printf("Elapsed time (seconds): " + fmt.Sprint(elapsedTime) + "\n")
-					tokensToBeAdded := elapsedTime / float64(1000) * float64(GetPeriodInt(config.Period))
-					fmt.Printf("Tokens to be added: " + fmt.Sprint(tokensToBeAdded) + "\n")
-					if uint(math.Floor(tokensToBeAdded)) > 0 {
-						_, err := r.Do("HSET", "userlimiter_"+id, "tokens", uint(math.Floor(tokensToBeAdded)))
-						if err != nil {
-							panic(err)
-						}
-						SetHeader(c, config.Capacity, config.AvailableTokens)
-						return next(c)
-					} else {
-						SetHeader(c, config.Capacity, 0)
-						return echo.ErrForbidden
-					}
 				}
+				elapsedTime := GetElapsedTime(reqTime, GetLastRefillTimestamp(id))
+				tokensToBeAdded := GetTokensToBeAdded(elapsedTime, config.Period)
+				if tokensToBeAdded > 0 {
+					Refill(id, tokensToBeAdded)
+					SetHeader(c, config.Capacity, GetTokens(id))
+					return next(c)
+				}
+				SetHeader(c, config.Capacity, 0)
+				return echo.ErrForbidden
 			}
-			SetHeader(c, config.Capacity, config.AvailableTokens)
+			SetHeader(c, config.Capacity, GetTokens(id))
 			return next(c)
 		}
 	}
+}
+
+//GetTokens return current available token in bucket
+func GetTokens(id string) uint {
+	var tokens uint
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	reply, err := r.Do("HGET", "userlimiter_"+id, "tokens")
+	if err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(reply.([]byte), &tokens); err != nil {
+		panic(err)
+	}
+
+	return tokens
+}
+
+//Refill bucket with token in certain period
+func Refill(id string, tokens uint) {
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	_, err := r.Do("HSET", "userlimiter_"+id, "tokens", tokens)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = r.Do("HSET", "userlimiter_"+id, "ts", time.Now().Unix())
+	if err != nil {
+		panic(err)
+	}
+}
+
+//Take a token to permit a request
+func Take(id string) {
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	_, err := r.Do("HINCRBY", "userlimiter_"+id, "tokens", -1)
+	if err != nil {
+		panic(err)
+	}
+}
+
+//GetLastRefillTimestamp return bucket's last refill timestamp
+func GetLastRefillTimestamp(id string) int64 {
+	var lastRefillTimestamp int64
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	reply, err := r.Do("HGET", "userlimiter_"+id, "ts")
+	if err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(reply.([]byte), &lastRefillTimestamp); err != nil {
+		panic(err)
+	}
+
+	return lastRefillTimestamp
+}
+
+//GetTokensToBeAdded calculate and return number of tokens to be added
+func GetTokensToBeAdded(elapsedTime int64, period string) uint {
+	tokens := uint(float64(elapsedTime) / float64(1000) * float64(GetPeriodInt(period)))
+	return tokens
+}
+
+//GetElapsedTime return elapsed time between bucket's last refill time and current request time
+func GetElapsedTime(requestTime int64, lastRefillTimestamp int64) int64 {
+	return (requestTime - lastRefillTimestamp)
 }
