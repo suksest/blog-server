@@ -52,7 +52,14 @@ func Limiter(config *Bucket) echo.MiddlewareFunc {
 				elapsedTime := GetElapsedTime(reqTime, GetLastRefillTimestamp(id))
 				tokensToBeAdded := GetTokensToBeAdded(elapsedTime, config.Period)
 				if tokensToBeAdded > 0 {
-					Refill(id, tokensToBeAdded)
+					if tokensToBeAdded <= config.Capacity {
+						Refill(id, tokensToBeAdded)
+						Take(id)
+						SetHeader(c, config.Capacity, GetTokens(id))
+						return next(c)
+					}
+					Refill(id, config.Capacity)
+					Take(id)
 					SetHeader(c, config.Capacity, GetTokens(id))
 					return next(c)
 				}
