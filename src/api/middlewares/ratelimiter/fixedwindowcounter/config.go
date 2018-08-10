@@ -1,4 +1,4 @@
-package fixedWindowCounter
+package fixedwindowcounter
 
 type Config struct {
 	Prefix     string //Prefix in redis key
