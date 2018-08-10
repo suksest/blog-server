@@ -3,55 +3,74 @@ package fixedwindowcounter
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"redis"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	b64 "encoding/base64"
+
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
 
-func getJWT(header, authScheme string, c echo.Context) (string, error) {
+type Payload struct {
+	Hash string `json:"hash"`
+	Exp  string `json:"exp"`
+	Jti  string `json:"jti"`
+}
+
+func getJWTPayload(header, authScheme string, c echo.Context) (string, error) {
 	auth := c.Request().Header.Get(echo.HeaderAuthorization)
 	l := len(authScheme)
+
 	if len(auth) > l+1 && auth[:l] == authScheme {
-		return auth[l+1:], nil
+		token := auth[l+1:]
+		tokens := strings.Split(token, ".") //prefix_id_time
+		return tokens[1], nil
 	}
+
 	return "", middleware.ErrJWTMissing
 }
 
-func extractClaims(tokenStr string) (jwt.MapClaims, bool) {
-	hmacSecretString := "" // Value
-	hmacSecret := []byte(hmacSecretString)
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		// check token signing method etc
-		return hmacSecret, nil
-	})
-
+func getDecodedPayload(payload string) (string, error) {
+	payloadDecoded, _ := b64.StdEncoding.DecodeString(payload)
+	payloadStr := string(payloadDecoded) + "}"
+	fmt.Printf(payloadStr + "\n")
+	payloadObj := Payload{}
+	err := json.Unmarshal(payloadDecoded, &payloadObj)
+	fmt.Printf(payloadObj.Hash + "asd\n")
 	if err != nil {
-		return nil, false
+		return "", err
 	}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims, true
-	} else {
-		log.Printf("Invalid JWT Token")
-		return nil, false
+	return payloadStr, nil
+}
+
+func getPayloadMap(payload []byte) Payload {
+	payloadObj := Payload{}
+	err := json.Unmarshal(payload, &payloadObj)
+	if err != nil {
+		fmt.Printf(payloadObj.Hash)
 	}
+	fmt.Printf(payloadObj.Hash)
+	return payloadObj
 }
 
 func UserLimiter(config *Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			token, err := getJWT(echo.HeaderAuthorization, "Bearer", c)
+			payload, err := getJWTPayload(echo.HeaderAuthorization, "Bearer", c)
 			if err != nil {
 				fmt.Printf(fmt.Sprint(err))
 			}
-			fmt.Printf("\nTOKEN:" + token + "\n")
-			id := token
+			fmt.Printf("\nTOKEN:" + payload + "\n")
+			id := payload
+
+			exp, err := getDecodedPayload(payload)
+
+			payloadObj := getPayloadMap([]byte(exp))
+			fmt.Printf(payloadObj.Exp)
 
 			r := redis.RedisConnect()
 			defer r.Close()
