@@ -5,7 +5,6 @@ import (
 	"api/middlewares"
 	fixedwindow "api/middlewares/ratelimiter/fixedwindowcounter"
 	tokenbucket "api/middlewares/ratelimiter/tokenbucket"
-
 	"github.com/labstack/echo"
 )
 
