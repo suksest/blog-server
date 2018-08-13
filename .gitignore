@@ -3,3 +3,4 @@ pkg/
 src/github.com/
 src/golang.org/
 .idea/
+src/postgres/pq.go
