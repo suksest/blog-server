@@ -15,7 +15,7 @@ func Init(b *Bucket, id string) { //id can be username for authenticated user, o
 	defer r.Close()
 
 	// Init
-	_, err := r.Do("HMSET", b.Prefix+"_"+id, "tokens", b.Capacity, "ts", fmt.Sprint(b.StartTimestamp))
+	_, err := r.Do("HMSET", b.Prefix+"_"+id, "tokens", b.Capacity, "ts", time.Now())
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +52,14 @@ func Limiter(config *Bucket) echo.MiddlewareFunc {
 				elapsedTime := GetElapsedTime(reqTime, GetLastRefillTimestamp(id))
 				tokensToBeAdded := GetTokensToBeAdded(elapsedTime, config.Period)
 				if tokensToBeAdded > 0 {
-					Refill(id, tokensToBeAdded)
+					if tokensToBeAdded <= config.Capacity {
+						Refill(id, tokensToBeAdded)
+						Take(id)
+						SetHeader(c, config.Capacity, GetTokens(id))
+						return next(c)
+					}
+					Refill(id, config.Capacity)
+					Take(id)
 					SetHeader(c, config.Capacity, GetTokens(id))
 					return next(c)
 				}
