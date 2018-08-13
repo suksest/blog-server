@@ -12,7 +12,6 @@ func AuthGroup(g *echo.Group) {
 	configAnon := fixedwindow.NewConfig("anonlimiter", 2, "minute")
 	g.Use(fixedwindow.AnonLimiter(configAnon))
 
-	g.GET("/main", handlers.MainJwt)
 	g.POST("/user", handlers.SignupUser)
 	g.POST("/user/login", handlers.LoginUser)
 }

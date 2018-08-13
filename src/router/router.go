@@ -10,7 +10,7 @@ func New() *echo.Echo {
 	e := echo.New()
 
 	// create groups
-	userGroup := e.Group("/v1.0/")
+	userGroup := e.Group("/v1.0")
 	authGroup := e.Group("/v1.0/auth")
 
 	// set main routes
