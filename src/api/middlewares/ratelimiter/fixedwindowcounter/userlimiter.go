@@ -16,7 +16,7 @@ import (
 
 type Payload struct {
 	Hash string `json:"hash"`
-	Exp  string `json:"exp"`
+	Exp  int64  `json:"exp"`
 	Jti  string `json:"jti"`
 }
 
@@ -33,22 +33,21 @@ func getJWTPayload(header, authScheme string, c echo.Context) (string, error) {
 	return "", middleware.ErrJWTMissing
 }
 
-func getDecodedPayload(payload string) (string, error) {
-	payloadDecoded, err := b64.StdEncoding.DecodeString(payload)
-	if err != nil {
-		return "", err
-	}
-	return payloadDecoded, nil
+func getDecodedPayload(payload string) string {
+	payloadDecoded, _ := b64.StdEncoding.DecodeString(payload)
+	payloadStr := string(payloadDecoded) + "}"
+	// fmt.Printf(payloadStr + "\n")
+
+	return payloadStr
 }
 
-func getPayloadMap(payload []byte) Payload {
+func getPayloadMap(payload []byte) (Payload, error) {
 	payloadObj := Payload{}
 	err := json.Unmarshal(payload, &payloadObj)
 	if err != nil {
-		fmt.Printf(payloadObj.Hash)
+		return payloadObj, err
 	}
-	fmt.Printf(payloadObj.Hash)
-	return payloadObj
+	return payloadObj, nil
 }
 
 func UserLimiter(config *Config) echo.MiddlewareFunc {
@@ -58,10 +57,15 @@ func UserLimiter(config *Config) echo.MiddlewareFunc {
 			if err != nil {
 				fmt.Printf(fmt.Sprint(err))
 			}
-			fmt.Printf("\nTOKEN:" + payload + "\n")
-			id := payload
+			// fmt.Printf("\nTOKEN:" + payload + "\n")
+			exp := getDecodedPayload(payload)
+			payloadObj, err := getPayloadMap([]byte(exp))
+			// fmt.Printf(payloadObj.Hash + "\n")
+			if err != nil {
+				fmt.Printf(fmt.Sprint(err))
+			}
 
-			exp, err := getDecodedPayload(payload)
+			id := payloadObj.Hash
 
 			r := redis.RedisConnect()
 			defer r.Close()
