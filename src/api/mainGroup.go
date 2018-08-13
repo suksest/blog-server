@@ -2,30 +2,17 @@ package api
 
 import (
 	"api/handlers"
+	"api/middlewares"
+
+	// fixedwindow "api/middlewares/ratelimiter/fixedwindowcounter"
 
 	"github.com/labstack/echo"
 )
 
 func MainGroup(e *echo.Echo) {
-	//General
-	// e.GET("/", handlers.Home)
 
-	// middleware, err := ratelimiter.RateLimitUlule()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// e.Use(middleware)
-
-	// http.Handle("/", middleware.Handler(http.HandlerFunc(index)))
-
-	//User
-	e.POST("/v1.0/user", handlers.SignupUser)
-	e.POST("/v1.0/user/login", handlers.LoginUser)
-	e.GET("/v1.0/users", handlers.GetAllUser)
-	e.GET("/v1.0/user/:id", handlers.GetUserByID)
-	e.DELETE("/v1.0/user/:id", handlers.DeleteUserByID)
-	e.PUT("/v1.0/user/:id", handlers.UpdateUser)
+	// set all middlewares
+	middlewares.SetMainMiddlewares(e)
 
 	//Post
 	e.POST("/v1.0/publish", handlers.PublishPost)

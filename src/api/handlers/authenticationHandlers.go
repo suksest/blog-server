@@ -1,8 +1,13 @@
 package handlers
 
 import (
+	"api/user"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"redis"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -10,46 +15,13 @@ import (
 )
 
 type JwtClaims struct {
-	Name string `json:"name"`
+	Hash string `json:"hash"`
 	jwt.StandardClaims
 }
 
-func LoginJWT(c echo.Context) error {
-	username := c.QueryParam("username")
-	password := c.QueryParam("password")
-
-	// check username and password against DB after hashing the password
-	if username == "ridwan" && password == "ridwan123" {
-		cookie := &http.Cookie{}
-
-		// this is the same
-		//cookie := new(http.Cookie)
-
-		cookie.Name = "sessionID"
-		cookie.Value = "some_string"
-		cookie.Expires = time.Now().Add(48 * time.Hour)
-
-		c.SetCookie(cookie)
-
-		// create jwt token
-		token, err := createJwtToken()
-		if err != nil {
-			log.Println("Error Creating JWT token", err)
-			return c.String(http.StatusInternalServerError, "something went wrong")
-		}
-
-		return c.JSON(http.StatusOK, map[string]string{
-			"message": "You were logged in!",
-			"token":   token,
-		})
-	}
-
-	return c.String(http.StatusUnauthorized, "Your username or password were wrong")
-}
-
-func createJwtToken() (string, error) {
+func createJwtToken(s string) (string, error) {
 	claims := JwtClaims{
-		"jack",
+		s,
 		jwt.StandardClaims{
 			Id:        "main_user_id",
 			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
@@ -64,4 +36,131 @@ func createJwtToken() (string, error) {
 	}
 
 	return token, nil
+}
+
+func SignupUser(c echo.Context) error {
+
+	theUser := user.User{}
+
+	defer c.Request().Body.Close()
+
+	b, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		log.Printf("Failed reading the request body for sign up: %s\n", err)
+		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+	}
+
+	err = json.Unmarshal(b, &theUser)
+	if err != nil {
+		log.Printf("Failed unmarshaling in signup user: %s\n", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FAILED",
+			"message": "Failed unmarshaling input",
+		})
+	}
+
+	res, err := user.Signup(&theUser)
+	if err != nil {
+		switch err.(type) {
+		case *user.UsernameDuplicateError:
+			fmt.Println("Bad Request: ", err.Error())
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"status":  "FAILED",
+				"message": "Bad Request",
+			})
+		case *user.EmailDuplicateError:
+			fmt.Println("Bad Request: ", err.Error())
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"status":  "FAILED",
+				"message": "Bad Request",
+			})
+		default:
+			fmt.Println("Internal Server Error: ", err.Error())
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"status":  "FAILED",
+				"message": "Internal Server Error",
+			})
+		}
+	}
+	fmt.Println("Created: ", res)
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "OK",
+		"message": "User with ID: " + fmt.Sprint(res) + " Sucessfully Created",
+	})
+}
+
+func LoginUser(c echo.Context) error {
+
+	theUser := user.User{}
+
+	// fmt.Printf("RealIP:" + fmt.Sprint(c.RealIP()) + "\n")
+	// fmt.Printf("Time:" + fmt.Sprint(time.Now().Unix()) + "\n")
+
+	defer c.Request().Body.Close()
+
+	b, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		log.Printf("Failed reading the request body for Login user: %s\n", err)
+		return c.JSON(http.StatusInternalServerError, "Failed reading the request body")
+	}
+
+	err = json.Unmarshal(b, &theUser)
+	if err != nil {
+		log.Printf("Failed unmarshaling in Login user: %s\n", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"status":  "FAILED",
+			"message": "Failed unmarshaling input",
+		})
+	}
+
+	res, err := user.Login(&theUser)
+	if err != nil {
+		switch err.(type) {
+		case *user.UsernameDuplicateError:
+			fmt.Println("Bad Request: ", err.Error())
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"status":  "FAILED",
+				"message": "Bad Request",
+			})
+		case *user.EmailDuplicateError:
+			fmt.Println("Bad Request: ", err.Error())
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"status":  "FAILED",
+				"message": "Bad Request",
+			})
+		default:
+			fmt.Println("Internal Server Error: ", err.Error())
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"status":  "FAILED",
+				"message": "Internal Server Error",
+			})
+		}
+	}
+
+	response := c.Response()
+	token, err := createJwtToken(res.Username)
+	if err != nil {
+		log.Println("Error Creating JWT token", err)
+		return c.String(http.StatusInternalServerError, "something went wrong")
+	}
+	response.Header().Set(echo.HeaderAuthorization, token)
+
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	t, err := json.Marshal(token)
+	if err != nil {
+		panic(err)
+	}
+
+	// Save JSON blob to Redis
+	_, err = r.Do("SET", "user:"+res.Username, t)
+	if err != nil {
+		panic(err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "OK",
+		"message": "User " + res.Username + " logged in",
+	})
 }

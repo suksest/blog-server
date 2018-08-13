@@ -3,13 +3,13 @@ package postgres
 import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/lib/pq"
 )
 
+//OpenDB open conncection to postgresql database
 func OpenDB() *gorm.DB {
 	db, err := gorm.Open("postgres",
 		`host=localhost
-		user=sukma password=openpgpwd
+		user=airin password=password
 		dbname=bookstore
 		sslmode=disable`)
 	if err != nil {
@@ -17,11 +17,4 @@ func OpenDB() *gorm.DB {
 	}
 
 	return db
-}
-
-func IsUniqueConstraintError(err error, constraintName string) bool {
-	if pqErr, ok := err.(*pq.Error); ok {
-		return pqErr.Code == "23505" && pqErr.Constraint == constraintName
-	}
-	return false
 }

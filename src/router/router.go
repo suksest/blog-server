@@ -2,8 +2,6 @@ package router
 
 import (
 	"api"
-	"api/middlewares"
-	limiter "api/middlewares/rateLimiter/fixedWindowCounter"
 
 	"github.com/labstack/echo"
 )
@@ -12,20 +10,15 @@ func New() *echo.Echo {
 	e := echo.New()
 
 	// create groups
-	jwtGroup := e.Group("/jwt")
-
-	// set all middlewares
-	middlewares.SetMainMiddlewares(e)
-	middlewares.SetJwtMiddlewares(jwtGroup)
-
-	config := limiter.NewConfig("userlimiter", 3, "minute")
-	e.Use(limiter.Limiter(config))
+	userGroup := e.Group("/v1.0/")
+	authGroup := e.Group("/v1.0/auth")
 
 	// set main routes
 	api.MainGroup(e)
 
 	// set group routes
-	api.JwtGroup(jwtGroup)
+	api.UserGroup(userGroup)
+	api.AuthGroup(authGroup)
 
 	return e
 }
