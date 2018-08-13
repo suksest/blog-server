@@ -34,17 +34,11 @@ func getJWTPayload(header, authScheme string, c echo.Context) (string, error) {
 }
 
 func getDecodedPayload(payload string) (string, error) {
-	payloadDecoded, _ := b64.StdEncoding.DecodeString(payload)
-	payloadStr := string(payloadDecoded) + "}"
-	fmt.Printf(payloadStr + "\n")
-	payloadObj := Payload{}
-	err := json.Unmarshal(payloadDecoded, &payloadObj)
-	fmt.Printf(payloadObj.Hash + "asd\n")
+	payloadDecoded, err := b64.StdEncoding.DecodeString(payload)
 	if err != nil {
 		return "", err
 	}
-
-	return payloadStr, nil
+	return payloadDecoded, nil
 }
 
 func getPayloadMap(payload []byte) Payload {
@@ -68,9 +62,6 @@ func UserLimiter(config *Config) echo.MiddlewareFunc {
 			id := payload
 
 			exp, err := getDecodedPayload(payload)
-
-			payloadObj := getPayloadMap([]byte(exp))
-			fmt.Printf(payloadObj.Exp)
 
 			r := redis.RedisConnect()
 			defer r.Close()
