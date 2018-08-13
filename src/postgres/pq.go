@@ -9,7 +9,7 @@ import (
 func OpenDB() *gorm.DB {
 	db, err := gorm.Open("postgres",
 		`host=localhost
-		user=sukma password=openpgpwd
+		user=airin password=password
 		dbname=bookstore
 		sslmode=disable`)
 	if err != nil {
