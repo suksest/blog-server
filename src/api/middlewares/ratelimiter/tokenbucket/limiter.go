@@ -15,7 +15,7 @@ func Init(b *Bucket, id string) { //id can be username for authenticated user, o
 	defer r.Close()
 
 	// Init
-	_, err := r.Do("HMSET", b.Prefix+"_"+id, "tokens", b.Capacity, "ts", fmt.Sprint(b.StartTimestamp))
+	_, err := r.Do("HMSET", b.Prefix+"_"+id, "tokens", b.Capacity, "ts", time.Now())
 	if err != nil {
 		panic(err)
 	}
