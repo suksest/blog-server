@@ -3,8 +3,8 @@ package router
 import (
 	"api"
 	"api/middlewares"
-	limiter "api/middlewares/ratelimiter/fixedwindowcounter"
-
+	fixedwindow "api/middlewares/ratelimiter/fixedwindowcounter"
+	tokenbucket "api/middlewares/ratelimiter/tokenbucket"
 	"github.com/labstack/echo"
 )
 
@@ -18,8 +18,10 @@ func New() *echo.Echo {
 	middlewares.SetMainMiddlewares(e)
 	middlewares.SetJwtMiddlewares(jwtGroup)
 
-	config := limiter.NewConfig("userlimiter", 3, "minute")
-	e.Use(limiter.UserLimiter(config))
+	config := fixedwindow.NewConfig("userlimiter", 3, "minute")
+	configTB := tokenbucket.NewConfig("userlimiter", 3, "minute")
+	e.Use(fixedwindow.Limiter(config))
+	e.Use(tokenbucket.Limiter(configTB))
 
 	// set main routes
 	api.MainGroup(e)
