@@ -10,9 +10,7 @@ import (
 func UserGroup(g *echo.Group) {
 
 	config := fixedwindow.NewConfig("userlimiter", 5, "minute")
-	// configTB := tokenbucket.NewConfig("userlimitertb", 3, "minute")
 	g.Use(fixedwindow.UserLimiter(config))
-	// g.Use(tokenbucket.Limiter(configTB))
 
 	g.GET("/users", handlers.GetAllUser)
 	g.GET("/user/:id", handlers.GetUserByID)
