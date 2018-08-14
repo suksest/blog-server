@@ -41,21 +41,21 @@ func Limiter(config *Bucket, c echo.Context, id string) bool {
 		Take(config.Prefix, id)
 	} else {
 		reqTime := time.Now().Unix()
-		if GetTokens(config.Prefix, id) != 0 {
+		if GetTokens(config.Prefix, id) > 0 {
 			Take(config.Prefix, id)
 			SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
 			return true
 		}
 		elapsedTime := GetElapsedTime(reqTime, GetLastRefillTimestamp(config.Prefix, id))
-		tokensToBeAdded := GetTokensToBeAdded(elapsedTime, config.Period)
+		tokensToBeAdded := GetTokensToBeAdded(elapsedTime, GetRefillInterval(config.Capacity, config.Period))
 		if tokensToBeAdded > 0 {
 			if tokensToBeAdded <= config.Capacity {
-				Refill(config.Prefix, id, tokensToBeAdded)
+				Refill(config.Prefix, id, tokensToBeAdded, config.Capacity)
 				Take(config.Prefix, id)
 				SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
 				return true
 			}
-			Refill(config.Prefix, id, config.Capacity)
+			Refill(config.Prefix, id, config.Capacity, config.Capacity)
 			Take(config.Prefix, id)
 			SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
 			return true
@@ -85,11 +85,19 @@ func GetTokens(prefix, id string) uint {
 }
 
 //Refill bucket with token in certain period
-func Refill(prefix, id string, tokens uint) {
+func Refill(prefix, id string, tokens uint, capacity uint) {
 	r := redis.RedisConnect()
 	defer r.Close()
 
-	_, err := r.Do("HSET", prefix+"_"+id, "tokens", tokens)
+	currentTokens := GetTokens(prefix, id)
+	if currentTokens+tokens > capacity {
+		_, err := r.Do("HSET", prefix+"_"+id, "tokens", capacity)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	_, err := r.Do("HINCRBY", prefix+"_"+id, "tokens", tokens)
 	if err != nil {
 		panic(err)
 	}
@@ -129,9 +137,15 @@ func GetLastRefillTimestamp(prefix, id string) int64 {
 }
 
 //GetTokensToBeAdded calculate and return number of tokens to be added
-func GetTokensToBeAdded(elapsedTime int64, period string) uint {
-	tokens := uint(float64(elapsedTime) / float64(1000) * float64(GetPeriodInt(period)))
+func GetTokensToBeAdded(elapsedTime int64, interval int64) uint {
+	tokens := uint(elapsedTime / interval)
 	return tokens
+}
+
+//GetRefillInterval calculate and return refill interval
+func GetRefillInterval(capacity uint, period string) int64 {
+	interval := int64(GetPeriodInt(period) / int64(capacity))
+	return interval
 }
 
 //GetElapsedTime return elapsed time between bucket's last refill time and current request time
