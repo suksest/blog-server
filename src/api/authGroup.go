@@ -12,7 +12,7 @@ import (
 func AuthGroup(g *echo.Group) {
 	// configAnon := fixedwindow.NewConfig("anonlimiter", 2, "minute")
 	// g.Use(fixedwindow.AnonLimiter(configAnon))
-	configAnon := swl.NewConfig("anonlimiterswl", 2, "minute")
+	configAnon := swl.NewConfig("anonlimiterswl", 5, "minute")
 	g.Use(swl.AnonLimiter(configAnon))
 
 	g.POST("/user", handlers.SignupUser)

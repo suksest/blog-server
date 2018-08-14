@@ -4,28 +4,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"redis"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo"
 )
 
-func Init(c *Config, id string) { //id can be username for authenticated user, or IP for anonymous user
+func Init(config *Config, id string) { //id can be username for authenticated user, or IP for anonymous user
 	r := redis.RedisConnect()
 	defer r.Close()
 
 	// Init
 	var timelog []int64
 	timelog = append(timelog, time.Now().UnixNano())
-	_, err := r.Do("SET", c.Prefix+"_"+id, timelog)
+	_, err := r.Do("SET", config.Prefix+"_"+id, timelog)
 	if err != nil {
 		fmt.Printf(fmt.Sprint(err))
 	}
 }
 
-func SetHeader(c echo.Context, limit, remain uint, reset int64) {
+func SetHeader(c echo.Context, limit, remain int) {
 	c.Response().Header().Set("X-RateLimit-Limit", fmt.Sprint(limit))
 	c.Response().Header().Set("X-RateLimit-Remaining", fmt.Sprint(remain))
-	c.Response().Header().Set("X-RateLimit-Update", fmt.Sprint(reset))
 }
 
 func Limiter(config *Config, c echo.Context, id string) bool {
@@ -38,10 +38,14 @@ func Limiter(config *Config, c echo.Context, id string) bool {
 		Init(config, id)
 	} else {
 		var timelog []int64
-		if err := json.Unmarshal(reply.([]byte), &timelog); err != nil {
+		// fmt.Printf("timelog: " + string(reply.([]byte)))
+		timestr := strings.Replace(string(reply.([]byte)), " ", ",", -1) //replace space to comma for valid json
+		// fmt.Printf("timelog2: " + timestr)
+		if err := json.Unmarshal([]byte(timestr), &timelog); err != nil {
 			fmt.Printf(fmt.Sprint(err))
 		}
-		reqnum := uint(len(timelog))
+		// fmt.Printf("timelog3: " + fmt.Sprint(timelog))
+		reqnum := len(timelog)
 		now := time.Now().UnixNano()
 		for i := reqnum - 1; i >= 0; i-- { //delete expire log
 			if (now - timelog[i]) > period {
@@ -49,17 +53,21 @@ func Limiter(config *Config, c echo.Context, id string) bool {
 				break
 			}
 		}
-		reqnum = uint(len(timelog)) //update request number
+		reqnum = len(timelog) //update request number
 		if reqnum < config.MaxRequest {
 			timelog = append(timelog, time.Now().UnixNano())
-			SetHeader(c, config.MaxRequest, config.MaxRequest-reqnum, period-(now-timelog[0]))
+			_, err := r.Do("SET", config.Prefix+"_"+id, timelog)
+			if err != nil {
+				fmt.Printf(fmt.Sprint(err))
+			}
+			SetHeader(c, config.MaxRequest, config.MaxRequest-reqnum)
 			return true
 		} else {
 			fmt.Printf("Limit Exceeded for :" + id + "\n")
-			SetHeader(c, config.MaxRequest, 0, period-now-timelog[0])
+			SetHeader(c, config.MaxRequest, 0)
 			return false
 		}
 	}
-	SetHeader(c, config.MaxRequest, config.MaxRequest, period)
+	SetHeader(c, config.MaxRequest, config.MaxRequest)
 	return true
 }

@@ -2,11 +2,11 @@ package slidingwindowlog
 
 type Config struct {
 	Prefix     string //Prefix in redis key
-	MaxRequest uint   //Number of Request in a period
+	MaxRequest int    //Number of Request in a period
 	Period     string //Period can be second, minute, hour, or day
 }
 
-func NewConfig(prefix string, maxRequest uint, period string) *Config {
+func NewConfig(prefix string, maxRequest int, period string) *Config {
 	config := &Config{
 		Prefix:     prefix,
 		MaxRequest: maxRequest,
