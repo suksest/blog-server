@@ -15,7 +15,7 @@ func Init(b *Bucket, id string) { //id can be username for authenticated user, o
 	defer r.Close()
 
 	// Init
-	_, err := r.Do("HMSET", b.Prefix+"_"+id, "drops", b.Capacity, "ts", time.Now().Unix())
+	_, err := r.Do("HMSET", b.Prefix+"_"+id, "drops", 0, "allowed", 0, "ts", time.Now().Unix())
 	if err != nil {
 		panic(err)
 	}
@@ -38,38 +38,86 @@ func Limiter(config *Bucket, c echo.Context, id string) bool {
 	}
 	if fmt.Sprint(keys) == "[]" {
 		Init(config, id)
-		Take(config.Prefix, id, 1)
-	} else {
-		reqTime := time.Now().Unix()
-		if GetTokens(config.Prefix, id) != 0 {
-			Take(config.Prefix, id, 1)
-			SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
-			return true
-		}
-		elapsedTime := GetElapsedTime(reqTime, GetLastRefillTimestamp(config.Prefix, id))
-		tokensToBeAdded := GetTokensToBeAdded(elapsedTime, config.Period)
-		if tokensToBeAdded > 0 {
-			if tokensToBeAdded <= config.Capacity {
-				Refill(config.Prefix, id)
-				Take(config.Prefix, id, tokensToBeAdded)
-				SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
-				return true
+		Fill(config.Prefix, id)
+		ticker := time.NewTicker(time.Duration(GetInterval(config.AllowedRequest, GetPeriodInt(config.Period))))
+		go func() {
+			for t := range ticker.C {
+				fmt.Println(t.Unix())
+				Leak(config.Prefix, id)
 			}
-			Refill(config.Prefix, id)
-			Take(config.Prefix, id, tokensToBeAdded)
-			SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
-			return true
-		}
-		SetHeader(c, config.Capacity, 0)
-		return false
+		}()
 	}
-	SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
+	SetHeader(c, config.Capacity, config.AllowedRequest-GetAllowed(config.Prefix, id))
 	return true
 }
 
-//GetTokens return current available token in bucket
-func GetTokens(prefix, id string) uint {
-	var tokens uint
+//IsFull check the bucket is full or not
+func IsFull(capacity uint, prefix, id string) bool {
+	if GetDrops(prefix, id) == capacity {
+		return true
+	}
+	return false
+}
+
+//IsEmpty check the bucket is empty or not
+func IsEmpty(prefix, id string) bool {
+	if GetDrops(prefix, id) == 0 {
+		return true
+	}
+	return false
+}
+
+//IsLimitExceed check limiter condition
+func IsLimitExceed(capacity, limit uint, prefix, id string) bool {
+	if GetAllowed(prefix, id) == limit {
+		return true
+	} else if IsFull(capacity, prefix, id) {
+		return true
+	}
+	return false
+}
+
+//Fill increment drops in bucket
+func Fill(prefix, id string) {
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	_, err := r.Do("HINCRBY", prefix+"_"+id, "drops", 1)
+	if err != nil {
+		panic(err)
+	}
+}
+
+//Leak decrement drops and increment allowed request in bucket
+func Leak(prefix, id string) {
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	_, err := r.Do("HINCRBY", prefix+"_"+id, "drops", -1)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = r.Do("HINCRBY", prefix+"_"+id, "allowed", 1)
+	if err != nil {
+		panic(err)
+	}
+}
+
+//UpdateTimestamp update timestamp in hash set
+func UpdateTimestamp(prefix, id string, timestamp int64) {
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	_, err := r.Do("HSET", prefix+"_"+id, "ts", timestamp)
+	if err != nil {
+		panic(err)
+	}
+}
+
+//GetDrops return number of drops in bucket
+func GetDrops(prefix, id string) uint {
+	var drops uint
 	r := redis.RedisConnect()
 	defer r.Close()
 
@@ -77,43 +125,17 @@ func GetTokens(prefix, id string) uint {
 	if err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(reply.([]byte), &tokens); err != nil {
+
+	if err := json.Unmarshal(reply.([]byte), &drops); err != nil {
 		panic(err)
 	}
 
-	return tokens
+	return drops
 }
 
-//Refill bucket with token in certain period
-func Refill(prefix, id string) {
-	r := redis.RedisConnect()
-	defer r.Close()
-
-	_, err := r.Do("HSET", prefix+"_"+id, "drops", 1)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = r.Do("HSET", prefix+"_"+id, "ts", time.Now().Unix())
-	if err != nil {
-		panic(err)
-	}
-}
-
-//Take a token to permit a request
-func Take(prefix, id string, tokens uint) {
-	r := redis.RedisConnect()
-	defer r.Close()
-
-	_, err := r.Do("HINCRBY", prefix+"_"+id, "drops", tokens)
-	if err != nil {
-		panic(err)
-	}
-}
-
-//GetLastRefillTimestamp return bucket's last refill timestamp
-func GetLastRefillTimestamp(prefix, id string) int64 {
-	var lastRefillTimestamp int64
+//GetTimestamp return timestamp in redis
+func GetTimestamp(prefix, id string) int64 {
+	var timestamp int64
 	r := redis.RedisConnect()
 	defer r.Close()
 
@@ -121,20 +143,38 @@ func GetLastRefillTimestamp(prefix, id string) int64 {
 	if err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(reply.([]byte), &lastRefillTimestamp); err != nil {
+
+	if err := json.Unmarshal(reply.([]byte), &timestamp); err != nil {
 		panic(err)
 	}
 
-	return lastRefillTimestamp
+	return timestamp
 }
 
-//GetTokensToBeAdded calculate and return number of tokens to be added
-func GetTokensToBeAdded(elapsedTime int64, period string) uint {
-	tokens := uint(float64(elapsedTime) / float64(1000) * float64(GetPeriodInt(period)))
-	return tokens
+//GetAllowed return allowed request stored in redis
+func GetAllowed(prefix, id string) uint {
+	var allowed uint
+	r := redis.RedisConnect()
+	defer r.Close()
+
+	reply, err := r.Do("HGET", prefix+"_"+id, "allowed")
+	if err != nil {
+		panic(err)
+	}
+
+	if err := json.Unmarshal(reply.([]byte), &allowed); err != nil {
+		panic(err)
+	}
+
+	return allowed
 }
 
-//GetElapsedTime return elapsed time between bucket's last refill time and current request time
-func GetElapsedTime(requestTime int64, lastRefillTimestamp int64) int64 {
-	return (requestTime - lastRefillTimestamp)
+//GetInterval return interval for each request
+func GetInterval(allowed uint, duration int64) int64 {
+	duration *= 1000 //duration in millisecond
+	result := float64(duration) / float64(allowed)
+
+	interval := int64(result)
+
+	return interval
 }
