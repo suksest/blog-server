@@ -1,4 +1,4 @@
-package tokenbucket
+package leakybucket
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ func Init(b *Bucket, id string) { //id can be username for authenticated user, o
 	defer r.Close()
 
 	// Init
-	_, err := r.Do("HMSET", b.Prefix+"_"+id, "tokens", b.Capacity, "ts", time.Now().Unix())
+	_, err := r.Do("HMSET", b.Prefix+"_"+id, "drops", b.Capacity, "ts", time.Now().Unix())
 	if err != nil {
 		panic(err)
 	}
@@ -38,25 +38,25 @@ func Limiter(config *Bucket, c echo.Context, id string) bool {
 	}
 	if fmt.Sprint(keys) == "[]" {
 		Init(config, id)
-		Take(config.Prefix, id)
+		Take(config.Prefix, id, 1)
 	} else {
 		reqTime := time.Now().Unix()
-		if GetTokens(config.Prefix, id) > 0 {
-			Take(config.Prefix, id)
+		if GetTokens(config.Prefix, id) != 0 {
+			Take(config.Prefix, id, 1)
 			SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
 			return true
 		}
 		elapsedTime := GetElapsedTime(reqTime, GetLastRefillTimestamp(config.Prefix, id))
-		tokensToBeAdded := GetTokensToBeAdded(elapsedTime, GetRefillInterval(config.Capacity, config.Period))
+		tokensToBeAdded := GetTokensToBeAdded(elapsedTime, config.Period)
 		if tokensToBeAdded > 0 {
 			if tokensToBeAdded <= config.Capacity {
-				Refill(config.Prefix, id, tokensToBeAdded, config.Capacity)
-				Take(config.Prefix, id)
+				Refill(config.Prefix, id)
+				Take(config.Prefix, id, tokensToBeAdded)
 				SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
 				return true
 			}
-			Refill(config.Prefix, id, config.Capacity, config.Capacity)
-			Take(config.Prefix, id)
+			Refill(config.Prefix, id)
+			Take(config.Prefix, id, tokensToBeAdded)
 			SetHeader(c, config.Capacity, GetTokens(config.Prefix, id))
 			return true
 		}
@@ -73,7 +73,7 @@ func GetTokens(prefix, id string) uint {
 	r := redis.RedisConnect()
 	defer r.Close()
 
-	reply, err := r.Do("HGET", prefix+"_"+id, "tokens")
+	reply, err := r.Do("HGET", prefix+"_"+id, "drops")
 	if err != nil {
 		panic(err)
 	}
@@ -85,19 +85,11 @@ func GetTokens(prefix, id string) uint {
 }
 
 //Refill bucket with token in certain period
-func Refill(prefix, id string, tokens uint, capacity uint) {
+func Refill(prefix, id string) {
 	r := redis.RedisConnect()
 	defer r.Close()
 
-	currentTokens := GetTokens(prefix, id)
-	if currentTokens+tokens > capacity {
-		_, err := r.Do("HSET", prefix+"_"+id, "tokens", capacity)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	_, err := r.Do("HINCRBY", prefix+"_"+id, "tokens", tokens)
+	_, err := r.Do("HSET", prefix+"_"+id, "drops", 1)
 	if err != nil {
 		panic(err)
 	}
@@ -109,11 +101,11 @@ func Refill(prefix, id string, tokens uint, capacity uint) {
 }
 
 //Take a token to permit a request
-func Take(prefix, id string) {
+func Take(prefix, id string, tokens uint) {
 	r := redis.RedisConnect()
 	defer r.Close()
 
-	_, err := r.Do("HINCRBY", prefix+"_"+id, "tokens", -1)
+	_, err := r.Do("HINCRBY", prefix+"_"+id, "drops", tokens)
 	if err != nil {
 		panic(err)
 	}
@@ -137,15 +129,9 @@ func GetLastRefillTimestamp(prefix, id string) int64 {
 }
 
 //GetTokensToBeAdded calculate and return number of tokens to be added
-func GetTokensToBeAdded(elapsedTime int64, interval int64) uint {
-	tokens := uint(elapsedTime / interval)
+func GetTokensToBeAdded(elapsedTime int64, period string) uint {
+	tokens := uint(float64(elapsedTime) / float64(1000) * float64(GetPeriodInt(period)))
 	return tokens
-}
-
-//GetRefillInterval calculate and return refill interval
-func GetRefillInterval(capacity uint, period string) int64 {
-	interval := int64(GetPeriodInt(period) / int64(capacity))
-	return interval
 }
 
 //GetElapsedTime return elapsed time between bucket's last refill time and current request time

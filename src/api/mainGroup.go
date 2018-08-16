@@ -4,8 +4,6 @@ import (
 	"api/handlers"
 	"api/middlewares"
 
-	// fixedwindow "api/middlewares/ratelimiter/fixedwindowcounter"
-
 	"github.com/labstack/echo"
 )
 
