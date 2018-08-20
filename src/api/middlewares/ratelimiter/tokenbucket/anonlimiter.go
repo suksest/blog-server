@@ -1,6 +1,10 @@
 package tokenbucket
 
-import "github.com/labstack/echo"
+import (
+	"net/http"
+
+	"github.com/labstack/echo"
+)
 
 //AnonLimiter handle request for anonymous user
 func AnonLimiter(config *Bucket) echo.MiddlewareFunc {
@@ -11,7 +15,7 @@ func AnonLimiter(config *Bucket) echo.MiddlewareFunc {
 			if Limiter(config, c, id) {
 				return next(c)
 			}
-			return echo.ErrForbidden
+			return echo.NewHTTPError(http.StatusTooManyRequests)
 		}
 	}
 }
