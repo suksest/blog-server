@@ -12,7 +12,6 @@ func MainGroup(e *echo.Echo) {
 	// set all middlewares
 	middlewares.SetMainMiddlewares(e)
 
-	//Post
 	e.POST("/v1.0/publish", handlers.PublishPost)
 	e.GET("/v1.0/posts", handlers.GetAllPost)
 	e.GET("/v1.0/post/:id", handlers.GetPostByID)
