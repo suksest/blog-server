@@ -25,11 +25,19 @@ func New() *echo.Echo {
 	swlGroup := e.Group("/v1.0/swl")
 	fwcGroup := e.Group("/v1.0/fwc")
 	tbGroup := e.Group("/v1.0/tb")
+<<<<<<< Updated upstream
+=======
+	ululeGroup := e.Group("/v1.0/ul")
+>>>>>>> Stashed changes
 
 	api.SwcGroup(swcGroup)
 	api.SwlGroup(swlGroup)
 	api.FwcGroup(fwcGroup)
 	api.TbGroup(tbGroup)
+<<<<<<< Updated upstream
+=======
+	api.UluleGroup(ululeGroup)
+>>>>>>> Stashed changes
 
 	return e
 }
