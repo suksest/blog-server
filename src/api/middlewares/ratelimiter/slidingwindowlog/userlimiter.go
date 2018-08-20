@@ -2,6 +2,7 @@ package slidingwindowlog
 
 import (
 	"fmt"
+	"net/http"
 
 	"api/middlewares/ratelimiter"
 
@@ -27,9 +28,8 @@ func UserLimiter(config *Config) echo.MiddlewareFunc {
 
 			if Limiter(config, c, id) {
 				return next(c)
-			} else {
-				return echo.ErrForbidden
 			}
+			return echo.NewHTTPError(http.StatusTooManyRequests)
 		}
 	}
 }

@@ -1,6 +1,8 @@
 package fixedwindowcounter
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo"
 )
 
@@ -11,9 +13,8 @@ func AnonLimiter(config *Config) echo.MiddlewareFunc {
 
 			if Limiter(config, c, id) {
 				return next(c)
-			} else {
-				return echo.ErrForbidden
 			}
+			return echo.NewHTTPError(http.StatusTooManyRequests)
 		}
 	}
 }

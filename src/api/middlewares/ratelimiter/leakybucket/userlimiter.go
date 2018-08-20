@@ -3,6 +3,7 @@ package leakybucket
 import (
 	"api/middlewares/ratelimiter"
 	"fmt"
+	"net/http"
 
 	"github.com/labstack/echo"
 )
@@ -28,7 +29,7 @@ func UserLimiter(config *Bucket) echo.MiddlewareFunc {
 			if Limiter(config, c, id) {
 				return next(c)
 			}
-			return echo.ErrForbidden
+			return echo.NewHTTPError(http.StatusTooManyRequests)
 		}
 	}
 }
