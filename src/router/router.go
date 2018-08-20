@@ -4,6 +4,7 @@ import (
 	"api"
 
 	"github.com/labstack/echo"
+	cho "github.com/webx-top/echo"
 )
 
 func New() *echo.Echo {
@@ -25,19 +26,17 @@ func New() *echo.Echo {
 	swlGroup := e.Group("/v1.0/swl")
 	fwcGroup := e.Group("/v1.0/fwc")
 	tbGroup := e.Group("/v1.0/tb")
-<<<<<<< Updated upstream
-=======
-	ululeGroup := e.Group("/v1.0/ul")
->>>>>>> Stashed changes
+	tollboothGroup := e.Group("/v1.0/tollbooth")
+
+	g := cho.New()
+	webxGroup := g.Group("/v1.0/webx")
 
 	api.SwcGroup(swcGroup)
 	api.SwlGroup(swlGroup)
 	api.FwcGroup(fwcGroup)
 	api.TbGroup(tbGroup)
-<<<<<<< Updated upstream
-=======
-	api.UluleGroup(ululeGroup)
->>>>>>> Stashed changes
+	api.TollboothGroup(tollboothGroup)
+	api.WebxGroup(webxGroup)
 
 	return e
 }
