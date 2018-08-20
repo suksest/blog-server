@@ -78,3 +78,21 @@ func BenchmarkTokenBucketGet(b *testing.B) {
 
 	}
 }
+
+func BenchmarkTollboothGet(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		url := "http://localhost:8000/v1.0/tollbooth/posts"
+
+		req, err := http.NewRequest("GET", url, nil)
+		req.Header.Set("Authorization", token)
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+	}
+}
