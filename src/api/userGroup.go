@@ -2,17 +2,16 @@ package api
 
 import (
 	"api/handlers"
-	fixedwindow "api/middlewares/ratelimiter/fixedwindowcounter"
+
+	fwc "api/middlewares/ratelimiter/fixedwindowcounter"
 
 	"github.com/labstack/echo"
 )
 
 func UserGroup(g *echo.Group) {
 
-	config := fixedwindow.NewConfig("userlimiter", 5, "minute")
-	// configTB := tokenbucket.NewConfig("userlimitertb", 3, "minute")
-	g.Use(fixedwindow.UserLimiter(config))
-	// g.Use(tokenbucket.Limiter(configTB))
+	config := fwc.NewConfig("userlimiter", 5, "minute")
+	g.Use(fwc.UserLimiter(config))
 
 	g.GET("/users", handlers.GetAllUser)
 	g.GET("/user/:id", handlers.GetUserByID)
