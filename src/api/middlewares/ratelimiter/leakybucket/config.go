@@ -2,17 +2,19 @@ package leakybucket
 
 //Bucket represent token bucket
 type Bucket struct {
-	Prefix   string //Prefix in redis key
-	Capacity uint   //Number of Capacity in a Bucket
-	Period   string //Period can be second, minute, hour, or day
+	Prefix         string //Prefix in redis key
+	Capacity       uint   //Number of Capacity in a Bucket
+	Period         string //Period can be second, minute, hour, or day
+	AllowedRequest uint   //AllowedRequest represent number of allowed request in certain period
 }
 
 //NewConfig return new Bucket configuration
-func NewConfig(prefix string, capacity uint, period string) *Bucket {
+func NewConfig(prefix string, capacity uint, period string, allowed uint) *Bucket {
 	config := &Bucket{
-		Prefix:   prefix,
-		Capacity: capacity,
-		Period:   period,
+		Prefix:         prefix,
+		Capacity:       capacity,
+		Period:         period,
+		AllowedRequest: allowed,
 	}
 	return config
 }
