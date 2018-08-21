@@ -9,11 +9,6 @@ import (
 
 func SwlGroup(g *echo.Group) {
 
-	// config := fixedwindow.NewConfig("userlimiter", 5, "minute")
-	// g.Use(fixedwindow.UserLimiter(config))
-	// configTB := tokenbucket.NewConfig("userlimitertb", 3, "minute")
-	// g.Use(tokenbucket.Limiter(configTB))
-
 	config := swl.NewConfig("userlimiterswl", 5, "minute")
 	g.Use(swl.UserLimiter(config))
 
