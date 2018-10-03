@@ -8,9 +8,9 @@ RESTful API Web server for simple blog using Echo framework, Gorm, Redis, and Po
 
 * Clone the project:
 
-  ```shell
-  git clone https://github.com/ridwanfathin/blog-server
-  ```
+```shell
+git clone https://github.com/ridwanfathin/blog-server
+```
 
 * Open the directory:
 
